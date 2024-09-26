@@ -24,9 +24,11 @@ Transit_df =
 Trash_df = 
   read_excel("./data/202309 Trash Wheel Collection Data.xlsx",
     skip = 1, range = "A2:N586") |>
-  janitor::clean_names()
+  janitor::clean_names() |>
+  mutate(sports_balls=round(sports_balls, digits = 0),
+         sports_balls = as.integer(sports_balls)) 
 
-
+Trash_df
 ```
 
 ```{r Great British Bake Off}
