@@ -1,0 +1,51 @@
+---
+title: "p8105_hw2_sw3455"
+author: "Shiying Wu"
+date: "2024-09-24"
+output: github_document
+---
+
+```{r library, message = FALSE}
+library(tidyverse)
+library(readxl)
+```
+
+```{r cars}
+Transit_df = 
+  read_csv(file = "./data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv",
+        na = c(".", "NA", "")) |>
+  janitor::clean_names() |>
+  select(line, station_name, station_latitude, station_longitude, route1, route2, route3, route4, route5, route6, route7, route8, route9, route10, route11, entry, vending, entrance_type, ada) |>
+  mutate(entry = ifelse(entry=="YES", TRUE, FALSE))
+  
+```
+
+```{r Mr.Trash Wheel}
+Trash_df = 
+  read_excel("./data/202309 Trash Wheel Collection Data.xlsx",
+    skip = 1, range = "A2:N586") |>
+  janitor::clean_names()
+
+
+```
+
+```{r Great British Bake Off}
+bakers_df = 
+  read_csv(file = "./data/gbb_datasets/bakers.csv",
+        na = c(".", "NA", "")) |>
+  janitor::clean_names()
+
+bakes_df = 
+  read_csv(file = "./data/gbb_datasets/bakes.csv",
+        na = c(".", "NA", "")) |>
+  janitor::clean_names()
+
+results_df = 
+  read_csv(file = "./data/gbb_datasets/results.csv", skip = 2,
+        na = c(".", "NA", "")) |>
+  janitor::clean_names()
+
+bake_off_tidy = 
+  bind_rows(bakers_df, bakes_df, results_df) |>
+  janitor::clean_names()
+```
