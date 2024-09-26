@@ -21,14 +21,32 @@ Transit_df =
 ```
 
 ```{r Mr.Trash Wheel}
-Trash_df = 
+MrTrash_df = 
   read_excel("./data/202309 Trash Wheel Collection Data.xlsx",
-    skip = 1, range = "A2:N586") |>
+  skip = 1, range = "A2:N586",
+  sheet = "Mr. Trash Wheel") |>
   janitor::clean_names() |>
   mutate(sports_balls=round(sports_balls, digits = 0),
-         sports_balls = as.integer(sports_balls)) 
+         sports_balls = as.integer(sports_balls),
+         year = as.numeric(year),
+         trash_wheel = "Mr. Trash Wheel") 
 
-Trash_df
+ProfTrash_df = 
+  read_excel("./data/202309 Trash Wheel Collection Data.xlsx",
+  skip = 1, range = "A2:M108",
+  sheet = "Professor Trash Wheel") |>
+  janitor::clean_names() |>
+  mutate(trash_wheel = "Professor Trash Wheel") 
+
+GTrash_df = 
+  read_excel("./data/202309 Trash Wheel Collection Data.xlsx",
+  skip = 1, range = "A2:L157",
+  sheet = "Gwynnda Trash Wheel") |>
+  janitor::clean_names() |>
+  mutate(trash_wheel = "Gwynnda Trash Wheel") 
+
+Trash_tidy = 
+  bind_rows(MrTrash_df, ProfTrash_df, GTrash_df)
 ```
 
 ```{r Great British Bake Off}
@@ -48,6 +66,5 @@ results_df =
   janitor::clean_names()
 
 bake_off_tidy = 
-  bind_rows(bakers_df, bakes_df, results_df) |>
-  janitor::clean_names()
+  bind_rows(bakers_df, bakes_df, results_df)
 ```
