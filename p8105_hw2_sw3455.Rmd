@@ -4,23 +4,26 @@ author: "Shiying Wu"
 date: "2024-09-24"
 output: github_document
 ---
-
+ All the needed package will be download in here.
 ```{r library, message = FALSE}
 library(tidyverse)
 library(readxl)
 ```
 
-```{r cars}
+## Problem 1
+```{r NYC Transit}
 Transit_df = 
   read_csv(file = "./data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv",
         na = c(".", "NA", "")) |>
   janitor::clean_names() |>
   select(line, station_name, station_latitude, station_longitude, route1, route2, route3, route4, route5, route6, route7, route8, route9, route10, route11, entry, vending, entrance_type, ada) |>
   mutate(entry = ifelse(entry=="YES", TRUE, FALSE))
-  
 ```
 
-```{r Mr.Trash Wheel}
+For problem 1, after read `NYC_Transit_Subway_Entrance_And_Exit_Data.csv` and noticed `".", "NA", ""` would be missing value. I used clean_names() in janitor package to clean the name. The dataset contain `division, line, station_name, station_latitude, station_longitude, route1, route2, route3, route4, route5, route6, route7, route8, route9, route10, route11, entrance_type, entry, exit_only, vending, staffing, staff_hours, ada, ada_notes, free_crossover, north_south_street, east_west_street, corner, entrance_latitude, entrance_longitude, station_location, entrance_location`. According to Professor want focus on retain line, station, name, station latitude / longitude, routes served, entry, vending, entrance type, and ADA compliance, so I select ``r colnames(Transit_df)`` as my variable. I also mutate entry into factor by ifelse function.
+
+
+```{r Trash Wheel}
 MrTrash_df = 
   read_excel("./data/202309 Trash Wheel Collection Data.xlsx",
   skip = 1, range = "A2:N586",
@@ -46,8 +49,24 @@ GTrash_df =
   mutate(trash_wheel = "Gwynnda Trash Wheel") 
 
 Trash_tidy = 
-  bind_rows(MrTrash_df, ProfTrash_df, GTrash_df)
+  bind_rows(MrTrash_df, ProfTrash_df, GTrash_df) |>
+  select(trash_wheel, everything())
 ```
+ The Trash Wheel data have `r ncol(Trash_tidy)` columns which means have `r ncol(Trash_tidy)` variables and `r nrow(Trash_tidy)` rows means `r nrow(Trash_tidy)` observations. The `r ncol(Trash_tidy)` variables are `r colnames(Trash_tidy)`. 
+ 
+------------------------------------------------------------
+*   The `r colnames(Trash_tidy)[1]` variable  is contain which trash wheel does dumpster belongs to which in this dataset would be categorical value, `Mr. Trash Wheel`, `Professor Trash Wheel`, and `Gwynnda Trash Wheel`. And the `r colnames(Trash_tidy)[2]` variable is number label of each dumpster for these trash wheel.
+
+*   The `r colnames(Trash_tidy)[3:5]` variable are time variables for the time things in each dumpster to be recorded.
+
+*   The `r colnames(Trash_tidy)[6]` variable recorded the total weight of trash in tons that each dumpster collected.
+
+*   The `r colnames(Trash_tidy)[7]` variable recorded the total size of trash in cubic yards that each dumpster collected.
+
+*   The `r colnames(Trash_tidy)[8:15]` variable recorded the total numbers of each specific trash collected.
+
+The total weight of trash collected by Professor Trash Wheel is `r sum(pull(ProfTrash_df, weight_tons))` The total number of cigarette butts collected by Gwynnda in June of 2022 is `r sum(pull(GTrash_df, weight_tons))`
+
 
 ```{r Great British Bake Off}
 bakers_df = 
