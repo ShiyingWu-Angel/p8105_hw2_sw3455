@@ -11,7 +11,7 @@ library(readxl)
 ```
 
 ## Problem 1
-```{r NYC Transit}
+```{r NYC Transit data imput}
 Transit_df = 
   read_csv(file = "./data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv",
         na = c(".", "NA", "")) |>
@@ -20,9 +20,63 @@ Transit_df =
   mutate(entry = ifelse(entry=="YES", TRUE, FALSE))
 ```
 
-For problem 1, after read `NYC_Transit_Subway_Entrance_And_Exit_Data.csv` and noticed `".", "NA", ""` would be missing value. I used clean_names() in janitor package to clean the name. The dataset contain `division, line, station_name, station_latitude, station_longitude, route1, route2, route3, route4, route5, route6, route7, route8, route9, route10, route11, entrance_type, entry, exit_only, vending, staffing, staff_hours, ada, ada_notes, free_crossover, north_south_street, east_west_street, corner, entrance_latitude, entrance_longitude, station_location, entrance_location`. According to Professor want focus on retain line, station, name, station latitude / longitude, routes served, entry, vending, entrance type, and ADA compliance, so I select ``r colnames(Transit_df)`` as my variable. I also mutate entry into factor by ifelse function.
+For problem 1, after read `NYC_Transit_Subway_Entrance_And_Exit_Data.csv` and noticed `".", "NA", ""` would be missing value. I used clean_names() in janitor package to clean the name. The dataset contain `division, line, station_name, station_latitude, station_longitude, route1, route2, route3, route4, route5, route6, route7, route8, route9, route10, route11, entrance_type, entry, exit_only, vending, staffing, staff_hours, ada, ada_notes, free_crossover, north_south_street, east_west_street, corner, entrance_latitude, entrance_longitude, station_location, entrance_location`. According to Professor want focus on retain line, station, name, station latitude / longitude, routes served, entry, vending, entrance type, and ADA compliance, so I select ``r colnames(Transit_df)`` as my variable. I also mutate entry into factor by ifelse() function. However, the data is not tidy due to not all station has as many as 11 routes which cause a lot of missing value in these observation, it could be better represented if we pivot longer.
 
 
+```{r NYC Transit part 2}
+#Question 1
+Transit_df |>
+  distinct(line, station_name) |>
+  nrow()
+
+#Question 2
+Transit_df |>
+  filter(ada == TRUE) |>
+  distinct(line, station_name) |>
+  nrow()
+
+#Question 3
+mean(pull(Transit_df |> filter(vending == "NO"), entry), na.rm = TRUE)
+
+```
+ 
+------------------------------------------------------------
+*   Q1: There are `r Transit_df |> distinct(line, station_name) |> nrow()` distinct stations. I used the distinc() to find the table that contain distinct combination of line and station, then use nrow() to find how many distinct stations.
+
+*   Q2: There are `r Transit_df |> filter(ada == TRUE) |> distinct(line, station_name) |> nrow()` stations are ADA compliant. I used the filter() to find all the ADA compliant observation, then use as same as previous question, used distinc() contain distinct combination of line and station that with ADA compliant observation, then use nrow() to find how many distinct stations that are ADA compliant.
+
+*   Q3: The proportion of station entrances / exits without vending allow entrance is `r mean(pull(Transit_df |> filter(vending == "NO"), entry), na.rm = TRUE)`. I can use the mean on boolean, so I use the mean to find the proportion of entry. I pulled out the data while filter all the no vending station entrances / exits.
+
+------------------------------------------------------------
+
+```{r NYC Transit part 3}
+#Reformat data so that route number and route name are distinct variables
+Transit_df_long <- Transit_df |>
+  mutate(route8 = as.character(route8),
+         route9 = as.character(route9),
+         route10 = as.character(route10),
+         route11 = as.character(route11))|>
+  pivot_longer(cols = starts_with("route"), 
+               names_to = "route_number", 
+               values_to = "route_name",
+               values_drop_na = TRUE)
+
+#distinct stations serve the A train
+Transit_df_long |>
+  filter(route_name == "A") |>
+  distinct(line, station_name) |>
+  nrow()
+
+#ADA compliant serve the A train
+Transit_df_long |>
+  filter(route_name == "A", ada == TRUE) |>
+  distinct(line, station_name) |>
+  nrow()
+```
+There is 60 distinct stations serve the A train, and 17 ADA compliant serve the A train.
+
+
+## Problem 2 
 ```{r Trash Wheel}
 MrTrash_df = 
   read_excel("./data/202309 Trash Wheel Collection Data.xlsx",
@@ -51,6 +105,14 @@ GTrash_df =
 Trash_tidy = 
   bind_rows(MrTrash_df, ProfTrash_df, GTrash_df) |>
   select(trash_wheel, everything())
+
+#total weight of trash collected by Professor Trash Wheel
+sum(pull(ProfTrash_df, weight_tons))
+
+#total number of cigarette butts collected by Gwynnda in June of 2022
+sum(pull(GTrash_df |>
+           filter(year == 2022,
+                  month == "June"), cigarette_butts))
 ```
  The Trash Wheel data have `r ncol(Trash_tidy)` columns which means have `r ncol(Trash_tidy)` variables and `r nrow(Trash_tidy)` rows means `r nrow(Trash_tidy)` observations. The `r ncol(Trash_tidy)` variables are `r colnames(Trash_tidy)`. 
  
@@ -65,25 +127,56 @@ Trash_tidy =
 
 *   The `r colnames(Trash_tidy)[8:15]` variable recorded the total numbers of each specific trash collected.
 
-The total weight of trash collected by Professor Trash Wheel is `r sum(pull(ProfTrash_df, weight_tons))` The total number of cigarette butts collected by Gwynnda in June of 2022 is `r sum(pull(GTrash_df, weight_tons))`
+The total weight of trash collected by Professor Trash Wheel is `r sum(pull(ProfTrash_df, weight_tons))` The total number of cigarette butts collected by Gwynnda in June of 2022 is `r sum(pull(GTrash_df |> filter(year == 2022, month == "June"), cigarette_butts))`.
 
-
-```{r Great British Bake Off}
+## Problem 3
+```{r Great British Bake Off Part 1}
 bakers_df = 
   read_csv(file = "./data/gbb_datasets/bakers.csv",
         na = c(".", "NA", "")) |>
-  janitor::clean_names()
+  janitor::clean_names() |>
+  separate(baker_name, into = c("first_name", "last_name"), sep = " ")
 
 bakes_df = 
   read_csv(file = "./data/gbb_datasets/bakes.csv",
         na = c(".", "NA", "")) |>
-  janitor::clean_names()
+  janitor::clean_names() |>
+  mutate(first_name = baker) |>
+  select(-baker)
 
 results_df = 
   read_csv(file = "./data/gbb_datasets/results.csv", skip = 2,
         na = c(".", "NA", "")) |>
-  janitor::clean_names()
+  janitor::clean_names() |>
+  mutate(first_name = baker) |>
+  select(-baker)
 
-bake_off_tidy = 
-  bind_rows(bakers_df, bakes_df, results_df)
+bake_off_tidy<- bakers_df |>
+  left_join(results_df, by = c("first_name", "series")) |>
+  left_join(bakes_df, by = c("first_name", "series", "episode")) |>
+  relocate(first_name, last_name, baker_age, baker_occupation, hometown, series, episode, signature_bake, show_stopper, result) |>
+  arrange(series, episode, first_name)
+  
+
+write_csv(bake_off_tidy, "./data/gbb_datasets/bake_off_tidy.csv")
 ```
+
+I used the read_csv() function to load the data and janitor::clean_names() to clean variable names. By viewing three data, I noticed that bakers.csv has the full name of baker, but other two dataset only contain first name. Thus, for bakers.csv, I split the baker's name into first_name and last_name for easier merging. In bakes.csv, I renamed columns and replaced the baker column with first_name to match with other two datasets. Finally, I merged the datasets using common columns (first_name, series, and episode) by left_join() to create a tidy dataset and relocate the order of variable with a meaningful orders. Thenn I arrange the dataset with order of series, episode, then baker's name for easier understanding. Then I exported data as bake_off_tidy.csv, to the gbb_datasets file. The dataset contains `r colnames(Transit_df)`
+
+```{r Great British Bake Off Part 2}
+bake_off_tidy|>
+  filter(series %in% 5:10, result == "STAR BAKER"|result == "WINNER")
+```
+
+It does not seems to be any pattern in it, but the winner all got star baker before, so for future winner prediction, we can based on people who left with winning experience of star baker.
+
+```{r Great British Bake Off Part 3}
+viewers_df <- read_csv("./data/gbb_datasets/viewers.csv", na = c(".", "NA", "")) |>
+  janitor::clean_names()
+head(viewers_df, 10)
+
+mean(viewers_df$series_1, na.rm = TRUE)
+mean(viewers_df$series_5, na.rm = TRUE)
+```
+ 
+The average of the viewer for series 1 is `r mean(viewers_df$series_1, na.rm = TRUE)`. And The average of the viewer for series 5 is `r mean(viewers_df$series_5, na.rm = TRUE)`.
