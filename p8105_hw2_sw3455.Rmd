@@ -41,6 +41,7 @@ mean(pull(Transit_df |> filter(vending == "NO"), entry), na.rm = TRUE)
 ```
  
 ------------------------------------------------------------
+
 *   Q1: There are `r Transit_df |> distinct(line, station_name) |> nrow()` distinct stations. I used the distinc() to find the table that contain distinct combination of line and station, then use nrow() to find how many distinct stations.
 
 *   Q2: There are `r Transit_df |> filter(ada == TRUE) |> distinct(line, station_name) |> nrow()` stations are ADA compliant. I used the filter() to find all the ADA compliant observation, then use as same as previous question, used distinc() contain distinct combination of line and station that with ADA compliant observation, then use nrow() to find how many distinct stations that are ADA compliant.
@@ -79,8 +80,8 @@ There is 60 distinct stations serve the A train, and 17 ADA compliant serve the 
 ## Problem 2 
 ```{r Trash Wheel}
 MrTrash_df = 
-  read_excel("./data/202309 Trash Wheel Collection Data.xlsx",
-  skip = 1, range = "A2:N586",
+  read_excel("./data/202409 Trash Wheel Collection Data.xlsx",
+  skip = 1, range = "A2:N653",
   sheet = "Mr. Trash Wheel") |>
   janitor::clean_names() |>
   mutate(sports_balls=round(sports_balls, digits = 0),
@@ -89,25 +90,26 @@ MrTrash_df =
          trash_wheel = "Mr. Trash Wheel") 
 
 ProfTrash_df = 
-  read_excel("./data/202309 Trash Wheel Collection Data.xlsx",
-  skip = 1, range = "A2:M108",
+  read_excel("./data/202409 Trash Wheel Collection Data.xlsx",
+  skip = 1, range = "A2:M121",
   sheet = "Professor Trash Wheel") |>
   janitor::clean_names() |>
   mutate(trash_wheel = "Professor Trash Wheel") 
 
 GTrash_df = 
-  read_excel("./data/202309 Trash Wheel Collection Data.xlsx",
-  skip = 1, range = "A2:L157",
+  read_excel("./data/202409 Trash Wheel Collection Data.xlsx",
+  skip = 1, range = "A2:L265",
   sheet = "Gwynnda Trash Wheel") |>
   janitor::clean_names() |>
   mutate(trash_wheel = "Gwynnda Trash Wheel") 
 
 Trash_tidy = 
   bind_rows(MrTrash_df, ProfTrash_df, GTrash_df) |>
-  select(trash_wheel, everything())
+  relocate(trash_wheel) |>
+  filter(!is.na(dumpster) & !is.na(date) & !is.na(weight_tons) & !is.na(volume_cubic_yards))
 
 #total weight of trash collected by Professor Trash Wheel
-sum(pull(ProfTrash_df, weight_tons))
+sum(pull(ProfTrash_df, weight_tons), na.rm = TRUE)
 
 #total number of cigarette butts collected by Gwynnda in June of 2022
 sum(pull(GTrash_df |>
@@ -127,7 +129,9 @@ sum(pull(GTrash_df |>
 
 *   The `r colnames(Trash_tidy)[8:15]` variable recorded the total numbers of each specific trash collected.
 
-The total weight of trash collected by Professor Trash Wheel is `r sum(pull(ProfTrash_df, weight_tons))` The total number of cigarette butts collected by Gwynnda in June of 2022 is `r sum(pull(GTrash_df |> filter(year == 2022, month == "June"), cigarette_butts))`.
+  The total weight of trash collected by Professor Trash Wheel is `r sum(pull(Trash_tidy |> filter(trash_wheel == "Professor Trash Wheel"), weight_tons))` The total number of cigarette butts collected by Gwynnda in June of 2022 is `r sum(pull(GTrash_df |> filter(year == 2022, month == "June"), cigarette_butts))`.
+   We skip the first line in excel which is the photo, read right sheet, and assigned proper range of each dataset. And use janitor::clean_names() to clean name, use round() and as.integer() to converts the number of sports balls to integer. After we rbind() all three dataset and omit rows that do not include dumpster-specific data.
+
 
 ## Problem 3
 ```{r Great British Bake Off Part 1}
@@ -141,42 +145,61 @@ bakes_df =
   read_csv(file = "./data/gbb_datasets/bakes.csv",
         na = c(".", "NA", "")) |>
   janitor::clean_names() |>
-  mutate(first_name = baker) |>
+  mutate(first_name = ifelse(baker=='"Jo"', "Jo", baker))|>
   select(-baker)
 
 results_df = 
-  read_csv(file = "./data/gbb_datasets/results.csv", skip = 2,
-        na = c(".", "NA", "")) |>
+  read_csv(file = "./data/gbb_datasets/results.csv", 
+           skip = 2,
+           na = c(".", "NA", "")) |>
   janitor::clean_names() |>
-  mutate(first_name = baker) |>
+  mutate(first_name = ifelse(baker == "Joanne", "Jo", baker)) |>
   select(-baker)
 
 bake_off_tidy<- bakers_df |>
-  left_join(results_df, by = c("first_name", "series")) |>
-  left_join(bakes_df, by = c("first_name", "series", "episode")) |>
-  relocate(first_name, last_name, baker_age, baker_occupation, hometown, series, episode, signature_bake, show_stopper, result) |>
-  arrange(series, episode, first_name)
-  
+  full_join(results_df, by = c("first_name", "series")) |>
+  full_join(bakes_df, by = c("first_name", "series", "episode")) |>
+  mutate(baker = paste(first_name, last_name, sep=" ")) |>
+  select(baker, baker_age, baker_occupation, hometown, series, episode, signature_bake, show_stopper,technical, result) |>
+  arrange(series, episode, baker) 
 
 write_csv(bake_off_tidy, "./data/gbb_datasets/bake_off_tidy.csv")
 ```
 
-I used the read_csv() function to load the data and janitor::clean_names() to clean variable names. By viewing three data, I noticed that bakers.csv has the full name of baker, but other two dataset only contain first name. Thus, for bakers.csv, I split the baker's name into first_name and last_name for easier merging. In bakes.csv, I renamed columns and replaced the baker column with first_name to match with other two datasets. Finally, I merged the datasets using common columns (first_name, series, and episode) by left_join() to create a tidy dataset and relocate the order of variable with a meaningful orders. Thenn I arrange the dataset with order of series, episode, then baker's name for easier understanding. Then I exported data as bake_off_tidy.csv, to the gbb_datasets file. The dataset contains `r colnames(Transit_df)`
+I used the read_csv() function to load the data and janitor::clean_names() to clean variable names. By viewing three data, I noticed that bakers.csv has the full name of baker, but other two dataset only contain first name. Thus, for bakers.csv, I split the baker's name into first_name and last_name for easier merging. In bakes.csv, I renamed columns and replaced the baker column with first_name to match with other two datasets. During the time, I noticed that "Jo" in bake.csv, Joanne in results.csv and Jo Wheatley in baker.csv are same people, so I change the first name all equal to Jo. Finally, I merged the datasets using common columns (first_name, series, and episode) by full_join() and also merge first_name and last name together in order to create a tidy dataset and select the order of variable with a meaningful orders and delete first_name and last name as we already has baker as baker name. Then I arrange the dataset with order of series, episode, then baker's name for easier understanding. Then I exported data as bake_off_tidy.csv, to the gbb_datasets file. The dataset contains `r colnames(bake_off_tidy)`
 
 ```{r Great British Bake Off Part 2}
 bake_off_tidy|>
-  filter(series %in% 5:10, result == "STAR BAKER"|result == "WINNER")
+  filter(series %in% 5:10, result == "STAR BAKER"| result == "WINNER") |>
+  select(series, episode, baker) |>
+  mutate(series = paste("series", series, sep="_")) |>
+  pivot_wider(names_from = series, values_from = "baker") |>
+  knitr::kable()
 ```
+I filtered series from 5 to 10 and all the result either equals to "STAR BAKER" or "WINNER", and select the value I need which are series episode and name. Due to winner in 1-9 episode are "STAR BAKER" and winner in last episode is "WINNER", so I do not need result. Then I pivot it wider to make episode as column and series and row, name as the value for better reading experiance. 
 
 It does not seems to be any pattern in it, but the winner all got star baker before, so for future winner prediction, we can based on people who left with winning experience of star baker.
 
 ```{r Great British Bake Off Part 3}
 viewers_df <- read_csv("./data/gbb_datasets/viewers.csv", na = c(".", "NA", "")) |>
-  janitor::clean_names()
-head(viewers_df, 10)
+  janitor::clean_names() |>
+  pivot_longer(
+    series_1:series_10,
+    names_to = "series", 
+    names_prefix = "series_",
+    values_to = "viewers")
 
-mean(viewers_df$series_1, na.rm = TRUE)
-mean(viewers_df$series_5, na.rm = TRUE)
+head(viewers_df, 10)|>
+  knitr::kable()
+
+
+mean(pull(viewers_df |> filter(series == 1), 
+          viewers),
+     na.rm = TRUE)
+mean(pull(viewers_df |> filter(series == 5), 
+          viewers),
+     na.rm = TRUE)
 ```
+I use read_csv() to import the viewer.csv and clean the name by janitor package. I pivot it longer to make episode andseries both are column,  so we have all value in same column.
  
-The average of the viewer for series 1 is `r mean(viewers_df$series_1, na.rm = TRUE)`. And The average of the viewer for series 5 is `r mean(viewers_df$series_5, na.rm = TRUE)`.
+The average of the viewer for series 1 is `r mean(pull(viewers_df |> filter(series == 1), viewers), na.rm = TRUE)`. And The average of the viewer for series 5 is `r mean(pull(viewers_df |> filter(series == 5), viewers), na.rm = TRUE)`.
