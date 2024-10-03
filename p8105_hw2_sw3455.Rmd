@@ -200,6 +200,6 @@ mean(pull(viewers_df |> filter(series == 5),
           viewers),
      na.rm = TRUE)
 ```
-I use read_csv() to import the viewer.csv and clean the name by janitor package. I pivot it longer to make episode andseries both are column,  so we have all value in same column.
+I use read_csv() to import the viewer.csv and clean the name by janitor package. I pivot it longer to make episode andseries both are column,  so we have all value in same column for better tidyness.
  
 The average of the viewer for series 1 is `r mean(pull(viewers_df |> filter(series == 1), viewers), na.rm = TRUE)`. And The average of the viewer for series 5 is `r mean(pull(viewers_df |> filter(series == 5), viewers), na.rm = TRUE)`.
